@@ -35,6 +35,15 @@ If you installed the app directly, you can also run:
 /Applications/QuickTranscript.app/Contents/Resources/setup_runtime.sh
 ```
 
+## Install With Homebrew
+
+```bash
+brew tap rohitjavvadi/tap
+brew install --cask quicktranscript
+```
+
+The cask installs `QuickTranscript.app` and runs the local runtime setup script.
+
 ## Build The App
 
 ```bash
