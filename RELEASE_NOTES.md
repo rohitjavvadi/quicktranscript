@@ -9,6 +9,8 @@ Initial public release.
 - Transcribes chunks locally with MLX Whisper.
 - Stores transcripts and raw audio under `~/Desktop/MeetingTranscripts`.
 - History menu for recent recordings, transcript paths, folders, and basic metadata.
+- Bundled runtime setup script for installing local MLX Whisper dependencies.
+- First-run app bootstrap if the runtime is missing.
 - Terminal fallback for users who prefer `./start.sh`.
 
 ## Setup

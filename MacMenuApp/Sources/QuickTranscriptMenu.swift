@@ -228,6 +228,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var watcher: Process?
     private var currentSessionURL: URL?
     private var isRecording = false
+    private var isInstallingRuntime = false
     private var controlWindow: NSWindow?
     private var controlStatusLabel: NSTextField?
     private var controlSessionLabel: NSTextField?
@@ -266,11 +267,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(showItem)
 
         let startStop = NSMenuItem(
-            title: isRecording ? "Stop Recording" : "Start Recording",
+            title: startStopTitle,
             action: #selector(toggleRecording),
             keyEquivalent: "r"
         )
         startStop.target = self
+        startStop.isEnabled = !isInstallingRuntime
         appMenu.addItem(startStop)
 
         let openAll = NSMenuItem(title: "Open All Recordings", action: #selector(openAllRecordings), keyEquivalent: "")
@@ -310,11 +312,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
 
         startStopItem = NSMenuItem(
-            title: isRecording ? "Stop Recording" : "Start Recording",
+            title: startStopTitle,
             action: #selector(toggleRecording),
             keyEquivalent: ""
         )
         startStopItem.target = self
+        startStopItem.isEnabled = !isInstallingRuntime
         menu.addItem(startStopItem)
 
         openTranscriptItem = NSMenuItem(title: "Open Transcript", action: #selector(openTranscript), keyEquivalent: "")
@@ -397,6 +400,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var statusTitle: String {
+        if isInstallingRuntime {
+            return "Installing local Whisper runtime..."
+        }
         if isRecording {
             return "Recording to \(currentSessionURL?.lastPathComponent ?? "session")"
         }
@@ -404,6 +410,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return "Stopped"
         }
         return "Ready"
+    }
+
+    private var startStopTitle: String {
+        if isInstallingRuntime {
+            return "Installing Runtime..."
+        }
+        return isRecording ? "Stop Recording" : "Start Recording"
     }
 
     @objc private func toggleRecording() {
@@ -456,7 +469,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buttons.orientation = .horizontal
         buttons.spacing = 8
 
-        let startStop = NSButton(title: isRecording ? "Stop Recording" : "Start Recording", target: self, action: #selector(toggleRecording))
+        let startStop = NSButton(title: startStopTitle, target: self, action: #selector(toggleRecording))
         startStop.bezelStyle = .rounded
         controlStartStopButton = startStop
 
@@ -501,7 +514,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateControlWindow() {
         controlStatusLabel?.stringValue = statusTitle
         controlSessionLabel?.stringValue = currentSessionURL?.path ?? "No active session"
-        controlStartStopButton?.title = isRecording ? "Stop Recording" : "Start Recording"
+        controlStartStopButton?.title = startStopTitle
+        controlStartStopButton?.isEnabled = !isInstallingRuntime
     }
 
     private func startRecording() {
@@ -511,10 +525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let watcherPath = watcherScriptPath()
 
         guard FileManager.default.isExecutableFile(atPath: pythonPath) else {
-            showAlert(
-                "Missing Python environment",
-                "Install the local Whisper runtime first:\n\n/Applications/QuickTranscript.app/Contents/Resources/setup_runtime.sh\n\nExpected Python at:\n\(pythonPath)"
-            )
+            installRuntimeThenStart()
             return
         }
 
@@ -565,6 +576,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         stopWatcher()
         runCatchupTranscription(sessionURL: sessionURL)
         rebuildMenu()
+    }
+
+    private func installRuntimeThenStart() {
+        guard !isInstallingRuntime else { return }
+
+        guard let scriptURL = Bundle.main.resourceURL?.appendingPathComponent("setup_runtime.sh"),
+              FileManager.default.isExecutableFile(atPath: scriptURL.path) else {
+            showAlert("Missing runtime installer", "Could not find setup_runtime.sh inside QuickTranscript.app.")
+            return
+        }
+
+        isInstallingRuntime = true
+        rebuildMenu()
+
+        do {
+            try FileManager.default.createDirectory(at: appSupportURL(), withIntermediateDirectories: true)
+            let logURL = appSupportURL().appendingPathComponent("setup_runtime.log")
+            FileManager.default.createFile(atPath: logURL.path, contents: nil)
+            let logHandle = try FileHandle(forWritingTo: logURL)
+
+            let process = Process()
+            process.executableURL = scriptURL
+            process.currentDirectoryURL = appSupportURL()
+            process.environment = [
+                "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            ]
+            process.standardOutput = logHandle
+            process.standardError = logHandle
+            process.terminationHandler = { [weak self] process in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isInstallingRuntime = false
+                    self.rebuildMenu()
+
+                    if process.terminationStatus == 0,
+                       FileManager.default.isExecutableFile(atPath: pythonExecutablePath()) {
+                        self.startRecording()
+                    } else {
+                        self.showAlert(
+                            "Runtime install failed",
+                            "Could not install MLX Whisper runtime. See log:\n\(logURL.path)"
+                        )
+                    }
+                }
+            }
+            try process.run()
+        } catch {
+            isInstallingRuntime = false
+            rebuildMenu()
+            showAlert("Runtime install failed", error.localizedDescription)
+        }
     }
 
     private func requestMicrophoneAccess(completion: @escaping (Bool) -> Void) {

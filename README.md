@@ -13,7 +13,16 @@ It was built for the pragmatic case: you join a Zoom/Meet call on laptop speaker
 - Keeps raw `.caf` audio chunks so a session can be re-transcribed later.
 - Shows recent recordings in a History menu.
 
-## Install Runtime
+## Install With Homebrew
+
+```bash
+brew tap rohitjavvadi/tap
+brew install --cask quicktranscript
+```
+
+The cask installs `QuickTranscript.app` and runs the local runtime setup script, so the MLX Whisper dependencies are installed as part of installation.
+
+## Runtime Dependencies
 
 The app uses a local Python/MLX Whisper runtime stored at:
 
@@ -21,7 +30,7 @@ The app uses a local Python/MLX Whisper runtime stored at:
 ~/Library/Application Support/QuickTranscript/.venv
 ```
 
-Install it once:
+If the runtime is missing, QuickTranscript installs it automatically the first time you start recording. You can also install or repair it manually:
 
 ```bash
 ./scripts/setup_runtime.sh
@@ -34,15 +43,6 @@ If you installed the app directly, you can also run:
 ```bash
 /Applications/QuickTranscript.app/Contents/Resources/setup_runtime.sh
 ```
-
-## Install With Homebrew
-
-```bash
-brew tap rohitjavvadi/tap
-brew install --cask quicktranscript
-```
-
-The cask installs `QuickTranscript.app` and runs the local runtime setup script.
 
 ## Build The App
 
