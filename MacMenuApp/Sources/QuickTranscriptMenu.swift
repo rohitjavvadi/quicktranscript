@@ -236,7 +236,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSLog("QuickTranscript applicationDidFinishLaunching")
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(.accessory)
         configureApplicationMenu()
         configureStatusItem()
         rebuildMenu()
@@ -760,5 +760,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 private let app = NSApplication.shared
 private let appDelegate = AppDelegate()
 app.delegate = appDelegate
-app.setActivationPolicy(.regular)
+app.setActivationPolicy(.accessory)
 app.run()
