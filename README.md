@@ -63,6 +63,23 @@ ditto dist/QuickTranscript.app /Applications/QuickTranscript.app
 open /Applications/QuickTranscript.app
 ```
 
+## Notarized Public Builds
+
+Unsigned or ad-hoc signed macOS apps can trigger Gatekeeper warnings. Public builds should be signed with a `Developer ID Application` certificate and notarized with Apple:
+
+```bash
+xcrun notarytool store-credentials quicktranscript \
+  --apple-id APPLE_ID \
+  --team-id TEAM_ID \
+  --password APP_SPECIFIC_PASSWORD
+
+SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+NOTARYTOOL_PROFILE=quicktranscript \
+./scripts/notarize_release.sh
+```
+
+This produces a notarized `dist/QuickTranscript.app.zip`.
+
 ## Use
 
 1. Join your meeting using laptop speakers.

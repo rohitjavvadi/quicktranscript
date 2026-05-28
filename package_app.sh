@@ -71,6 +71,18 @@ CLANG_MODULE_CACHE_PATH=.build/module-cache swiftc \
 cp MacMenuApp/Info.plist "$CONTENTS/Info.plist"
 cp scripts/transcribe_watch.py "$RESOURCES/transcribe_watch.py"
 cp scripts/setup_runtime.sh "$RESOURCES/setup_runtime.sh"
-codesign --force --deep --sign - "$APP" >/dev/null
+
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+  codesign --force --deep --sign - "$APP" >/dev/null
+else
+  codesign \
+    --force \
+    --deep \
+    --options runtime \
+    --timestamp \
+    --sign "$SIGN_IDENTITY" \
+    "$APP" >/dev/null
+fi
 
 echo "$PWD/$APP"
